@@ -2,34 +2,76 @@
 using InfluxDB.Flux.Builder.Parameterization;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace InfluxDB.Flux.Builder
 {
-    public class FluxFilter
+    public delegate void FluxCondition();
+
+    public class FluxFilterBuilder
     {
+        private const string AndOperator = " and ";
+        private const string OrOperator = " or ";
+
         private readonly StringBuilder _stringBuilder;
         private readonly FluxBuilderOptions _options;
         private readonly ParametersManager _parameters;
-        private bool _firstCondition = true;
 
-        internal FluxFilter(StringBuilder stringBuilder, FluxBuilderOptions options, ParametersManager parameters)
+        internal FluxFilterBuilder(StringBuilder stringBuilder, FluxBuilderOptions options, ParametersManager parameters)
         {
             _stringBuilder = stringBuilder;
             _options = options;
             _parameters = parameters;
         }
 
-        private void AppendAndIfNeeded()
-        {
-            if (_firstCondition)
-                _firstCondition = false;
-            else
-                _stringBuilder.Append(" and ");
-        }
+        /// <summary>
+        /// Adds conditions separated by the <c>and</c> logical operator to the filter predicate.
+        /// </summary>
+        /// <param name="conditions">Conditions to be separated by the <c>and</c> logical operator.</param>
+        public FluxCondition And(IEnumerable<FluxCondition> conditions) => AppendGroup(conditions, AndOperator);
 
         /// <summary>
-        /// <para>Add conditions to the filter predicate with raw Flux specified in the <paramref name="rawFluxFilters"/> interpolated string.</para>
+        /// Adds conditions separated by the <c>and</c> logical operator to the filter predicate.
+        /// </summary>
+        /// <param name="conditions">Conditions to be separated by the <c>and</c> logical operator.</param>
+        public FluxCondition And(params FluxCondition[] conditions) => AppendGroup(conditions, AndOperator);
+
+        /// <summary>
+        /// Adds conditions separated by the <c>or</c> logical operator to the filter predicate.
+        /// </summary>
+        /// <param name="conditions">Conditions to be separated by the <c>or</c> logical operator.</param>
+        public FluxCondition Or(IEnumerable<FluxCondition> conditions) => AppendGroup(conditions, OrOperator);
+
+        /// <summary>
+        /// Adds conditions separated by the <c>or</c> logical operator to the filter predicate.
+        /// </summary>
+        /// <param name="conditions">Conditions to be separated by the <c>or</c> logical operator.</param>
+        public FluxCondition Or(params FluxCondition[] conditions) => AppendGroup(conditions, OrOperator);
+
+        private FluxCondition AppendGroup(IEnumerable<FluxCondition> conditions, string logicalOperator) => () =>
+        {
+            if (conditions == null || !conditions.Any())
+                throw new ArgumentException($"No filtering condition has been provided.");
+
+            bool firstCondition = true;
+
+            _stringBuilder.Append('(');
+            foreach (var condition in conditions)
+            {
+                if (firstCondition)
+                    firstCondition = false;
+                else
+                    _stringBuilder.Append(logicalOperator);
+
+                condition();
+            }
+            _stringBuilder.Append(')');
+        };
+
+
+        /// <summary>
+        /// <para>Adds conditions to the filter predicate with raw Flux specified in the <paramref name="rawFluxFilters"/> interpolated string.</para>
         /// <para>Records representing each row are passed as <c>r</c>.</para>
         /// </summary>
         /// <remarks>
@@ -37,17 +79,12 @@ namespace InfluxDB.Flux.Builder
         /// Interpolated values in the <paramref name="rawFluxFilters"/> query string will be parameterized automatically.
         /// </remarks>
         /// <param name="rawFluxFilters">An interpolated string representing a raw Flux predicate (eg. <c>"r._value &gt; 0 and r._value &lt; 50"</c>).</param>
-        public FluxFilter Where(FormattableString rawFluxFilters)
-        {
-            AppendAndIfNeeded();
+        public FluxCondition Where(FormattableString rawFluxFilters) => () =>
             _stringBuilder.Append(_parameters.Parameterize(rawFluxFilters, "filter_where"));
-
-            return this;
-        }
 
         /// <summary>
         /// <para>
-        /// Add conditions to the filter predicate with raw Flux returned by the <paramref name="rawFluxFiltersBuilder"/> function
+        /// Adds conditions to the filter predicate with raw Flux returned by the <paramref name="rawFluxFiltersBuilder"/> function
         /// (without built-in protection against Flux injection attacks).
         /// </para>
         /// <para>Records representing each row are passed as <c>r</c>.</para>
@@ -61,81 +98,56 @@ namespace InfluxDB.Flux.Builder
         /// </code>
         /// </remarks>
         /// <param name="rawFluxFiltersBuilder">A function that builds a string representing a raw Flux predicate (eg. <c>"r._value &gt; 0 and r._value &lt; 50"</c>).</param>
-        public FluxFilter WhereUnsafe(Func<ParametersManager, string> rawFluxFiltersBuilder)
-        {
-            AppendAndIfNeeded();
+        public FluxCondition WhereUnsafe(Func<ParametersManager, string> rawFluxFiltersBuilder) => () =>
             _stringBuilder.Append(rawFluxFiltersBuilder(_parameters));
 
-            return this;
-        }
 
         /// <summary>
-        /// Add a condition to the filter predicate to keep only records with the specified <paramref name="measurement"/>.
+        /// Adds a condition to the filter predicate to keep only records with the specified <paramref name="measurement"/>.
         /// </summary>
         /// <param name="measurement">Name of the measurement to filter records.</param>
-        public FluxFilter Measurement(string measurement)
-        {
-            AppendAndIfNeeded();
+        public FluxCondition Measurement(string measurement) => () =>
             _stringBuilder.Append("r._measurement == ").Append(_parameters.Parameterize("filter_measurement", measurement));
 
-            return this;
-        }
 
         /// <summary>
-        /// Add a condition to the filter predicate to keep only records with the specified <paramref name="tagKey"/> and <paramref name="tagValue"/>.
+        /// Adds a condition to the filter predicate to keep only records with the specified <paramref name="tagKey"/> and <paramref name="tagValue"/>.
         /// </summary>
         /// <param name="tagKey">Key of the tag to filter.</param>
         /// <param name="tagValue">Value of the tag to filter.</param>
-        public FluxFilter Tag(string tagKey, string tagValue)
+        public FluxCondition Tag(string tagKey, string tagValue) => () =>
         {
-            AppendAndIfNeeded();
-
             // The Flux function "record.get()" is currently the only way to get a value from a record using a key specified with a variable.
             // Unfortunately, "r[myVariable]" does not work. See https://github.com/influxdata/flux/issues/2510.
             _stringBuilder.Append("record.get(r: r, key: ").Append(_parameters.Parameterize("filter_tagKey", tagKey)).Append(", default: \"\") == ")
                 .Append(_parameters.Parameterize("filter_tagValue", tagValue));
             _options.ImportPackage(FluxPackages.Experimental_Record);
-
-            return this;
-        }
+        };
 
         /// <summary>
-        /// Add conditions to the filter predicate to keep only records with the specified <paramref name="tags"/>.
+        /// Adds conditions to the filter predicate to keep only records with the specified <paramref name="tags"/>.
         /// </summary>
         /// <param name="tags">A dictionary of tag keys and values to filter records.</param>
-        public FluxFilter Tags(IDictionary<string, string> tags)
-        {
-            if (tags == null)
-                return this;
+        public FluxCondition Tags(IDictionary<string, string> tags) => And(tags.Select(t => Tag(t.Key, t.Value)));
 
-            foreach (var tag in tags)
-                Tag(tag.Key, tag.Value);
-
-            return this;
-        }
 
         /// <summary>
-        /// Add conditions to the filter predicate to keep only records with any specified <paramref name="fields"/>.
+        /// Adds a condition to the filter predicate to keep only records with the specified <paramref name="field"/>.
+        /// </summary>
+        /// <param name="field">Key of the field to filter.</param>
+        public FluxCondition Field(string field) => () =>
+            _stringBuilder.Append("r._field == ").Append(_parameters.Parameterize("filter_field", field));
+
+        /// <summary>
+        /// Adds conditions to the filter predicate to keep only records with any specified <paramref name="fields"/>.
         /// </summary>
         /// <param name="fields">An array of field keys to filter records.</param>
-        public FluxFilter Fields(params string[] fields)
-        {
-            if (fields == null || fields.Length == 0)
-                return this;
+        public FluxCondition Fields(IEnumerable<string> fields) => Or(fields.Select(Field));
 
-            AppendAndIfNeeded();
-
-            _stringBuilder.Append('(');
-            for (int i = 0; i < fields.Length; i++)
-            {
-                if (i > 0)
-                    _stringBuilder.Append(" or ");
-
-                _stringBuilder.Append("r._field == ").Append(_parameters.Parameterize("filter_field", fields[i]));
-            }
-            _stringBuilder.Append(')');
-
-            return this;
-        }
+        /// <summary>
+        /// Adds conditions to the filter predicate to keep only records with any specified <paramref name="fields"/>.
+        /// </summary>
+        /// <param name="fields">An array of field keys to filter records.</param>
+        public FluxCondition Fields(params string[] fields) => Or(fields.Select(Field));
     }
 }

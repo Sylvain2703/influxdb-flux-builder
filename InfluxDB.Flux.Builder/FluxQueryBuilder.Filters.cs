@@ -20,13 +20,13 @@ namespace InfluxDB.Flux.Builder
         }
 
         /// <inheritdoc/>
-        public IFluxStream Filter(Action<FluxFilter> filterAction)
+        public IFluxStream Filter(Func<FluxFilterBuilder, FluxCondition> buildFilter)
         {
             _stringBuilder.AppendLine();
             _stringBuilder.AppendPipe().Append("filter(fn: (r) => ");
 
-            var filter = new FluxFilter(_stringBuilder, _options, _parameters);
-            filterAction.Invoke(filter);
+            var filterBuilder = new FluxFilterBuilder(_stringBuilder, _options, _parameters);
+            buildFilter.Invoke(filterBuilder).Invoke();
 
             _stringBuilder.Append(')');
             return this;

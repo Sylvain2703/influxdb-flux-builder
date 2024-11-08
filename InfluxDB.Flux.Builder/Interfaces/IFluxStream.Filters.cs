@@ -30,8 +30,8 @@ namespace InfluxDB.Flux.Builder
         /// <summary>
         /// Filters data based on conditions defined in a predicate function.
         /// </summary>
-        /// <param name="filterAction">An action to specify the predicate function that evaluates <see langword="true"/> or <see langword="false"/>.</param>
+        /// <param name="buildFilter">A function to build a filter predicate that evaluates to <see langword="true"/> or <see langword="false"/>.</param>
         /// <seealso href="https://docs.influxdata.com/flux/latest/stdlib/universe/filter/">filter() function - InfluxDB documentation</seealso>
-        IFluxStream Filter(Action<FluxFilter> filterAction);
+        IFluxStream Filter(Func<FluxFilterBuilder, FluxCondition> buildFilter);
     }
 }
