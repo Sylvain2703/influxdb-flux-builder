@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Label="Project configuration">
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Project properties">
+    <AssemblyName>InfluxDB.Flux.Builder</AssemblyName>
+    <Version>2.0.0-preview.1</Version>
+    <Description>A library to easily build Flux queries for InfluxDB. Forked from PW.FluxQueryNet and Flux.Net by Malik Rizwan Bashir.</Description>
+    <Authors>Sylvain Bruyère,Marc Weydert,Malik Rizwan Bashir</Authors>
+    <Copyright>Copyright © Sylvain Bruyère $([System.DateTime]::UtcNow.ToString("yyyy")). Copyright © Paul Wurth S.A. 2022-2024. Copyright © Malik Rizwan Bashir.</Copyright>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/Sylvain2703/influxdb-flux-builder</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <SourceRevisionId Condition="'$(SourceRevisionId)' == ''">dev.$([System.Environment]::UserName).$([System.DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssK"))</SourceRevisionId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NodaTime" Version="3.2.0" />
+    <PackageReference Include="InfluxDB.Client" Version="4.18.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

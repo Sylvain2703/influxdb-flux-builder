@@ -1,7 +1,12 @@
-# PW.FluxQueryNet
+# InfluxDB.Flux.Builder
 
-Flux query builder fluent API for .NET.  
-Forked from [this project](https://github.com/MalikRizwanBashir/FluxQuery.Net) and significantly improved.
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](/LICENSE)
+![PRs: welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+
+**A .NET library to easily build Flux queries for InfluxDB.**
+
+Forked from [PW.FluxQueryNet](https://github.com/paul-wurth/PW.FluxQueryNet), itself forked from [FluxQuery.Net by Malik Rizwan Bashir](https://github.com/MalikRizwanBashir/FluxQuery.Net) and significantly improved.
+
 
 ## Example
 
@@ -54,3 +59,12 @@ from(bucket: params.from_bucket_0)
 |> aggregateWindow(fn: mean, every: params.aggregateWindow_every_11, createEmpty: params.aggregateWindow_createEmpty_12)
 |> limit(n: params.limit_n_13)
 ```
+
+
+## License
+
+Copyright © Sylvain Bruyère 2024\
+Copyright © Paul Wurth S.A. 2022-2024\
+Copyright © Malik Rizwan Bashir
+
+This repository is licensed under [Apache License 2.0 (Apache-2.0)](/LICENSE).
