@@ -10,25 +10,25 @@ namespace InfluxDB.Flux.Builder
         /// </summary>
         /// <remarks>
         /// This method provides a built-in mechanism to protect against Flux injection attacks.
-        /// Interpolated values in the <paramref name="rawFlux"/> query string will be parameterized automatically.
+        /// Interpolated values in the <paramref name="rawFlux"/> string will be parameterized automatically.
         /// </remarks>
         /// <param name="rawFlux">An interpolated string representing raw Flux (to operate on and return a data stream).</param>
         IFluxStream PipeCustomFlux(FormattableString rawFlux);
 
         /// <summary>
-        /// Performs an operation returned by the <paramref name="rawFluxBuilder"/> function, on the piped data stream
+        /// Performs an operation returned by the <paramref name="buildRawFlux"/> function, on the piped data stream
         /// (without built-in protection against Flux injection attacks).
         /// </summary>
         /// <remarks>
         /// To prevent Flux injection attacks, <b>never pass a concatenated or interpolated string</b> (<c>$""</c>) with
         /// non-validated user-provided values into this method.<br/>Instead, use the <see cref="ParametersManager"/>
-        /// argument provided by <paramref name="rawFluxBuilder"/> to parameterize the values, as below:
+        /// argument provided by <paramref name="buildRawFlux"/> to parameterize the values, as below:
         /// <code>
         /// PipeCustomFluxUnsafe(p => "stddev(mode: " + p.Parameterize("stddevMode", mode) + ")")
         /// </code>
         /// </remarks>
-        /// <param name="rawFluxBuilder">A function that builds a string representing raw Flux (to operate on and return a data stream).</param>
-        IFluxStream PipeCustomFluxUnsafe(Func<ParametersManager, string> rawFluxBuilder);
+        /// <param name="buildRawFlux">A function that builds a string representing raw Flux (to operate on and return a data stream).</param>
+        IFluxStream PipeCustomFluxUnsafe(Func<ParametersManager, string> buildRawFlux);
 
         /// <summary>
         /// <para>Delivers input data as a result of the query.</para>

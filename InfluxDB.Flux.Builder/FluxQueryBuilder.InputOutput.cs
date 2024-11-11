@@ -21,9 +21,9 @@ namespace InfluxDB.Flux.Builder
         }
 
         /// <inheritdoc/>
-        public IFluxStream FromCustomFluxUnsafe(Func<ParametersManager, string> rawFluxBuilder)
+        public IFluxStream FromCustomFluxUnsafe(Func<ParametersManager, string> buildRawFlux)
         {
-            _stringBuilder.Append(rawFluxBuilder(_parameters));
+            _stringBuilder.Append(buildRawFlux(_parameters));
             return this;
         }
 

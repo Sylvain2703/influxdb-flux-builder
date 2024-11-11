@@ -71,20 +71,20 @@ namespace InfluxDB.Flux.Builder
 
 
         /// <summary>
-        /// <para>Adds conditions to the filter predicate with raw Flux specified in the <paramref name="rawFluxFilters"/> interpolated string.</para>
+        /// <para>Adds conditions to the filter predicate with raw Flux specified in the <paramref name="rawFlux"/> interpolated string.</para>
         /// <para>Records representing each row are passed as <c>r</c>.</para>
         /// </summary>
         /// <remarks>
         /// This method provides a built-in mechanism to protect against Flux injection attacks.
-        /// Interpolated values in the <paramref name="rawFluxFilters"/> query string will be parameterized automatically.
+        /// Interpolated values in the <paramref name="rawFlux"/> string will be parameterized automatically.
         /// </remarks>
-        /// <param name="rawFluxFilters">An interpolated string representing a raw Flux predicate (eg. <c>"r._value &gt; 0 and r._value &lt; 50"</c>).</param>
-        public FluxCondition Where(FormattableString rawFluxFilters) => () =>
-            _stringBuilder.Append(_parameters.Parameterize(rawFluxFilters, "filter_where"));
+        /// <param name="rawFlux">An interpolated string representing a raw Flux predicate (eg. <c>"r._value &gt; 0 and r._value &lt; 50"</c>).</param>
+        public FluxCondition WithCustomFlux(FormattableString rawFlux) => () =>
+            _stringBuilder.Append(_parameters.Parameterize(rawFlux, "filter_withCustomFlux"));
 
         /// <summary>
         /// <para>
-        /// Adds conditions to the filter predicate with raw Flux returned by the <paramref name="rawFluxFiltersBuilder"/> function
+        /// Adds conditions to the filter predicate with raw Flux returned by the <paramref name="buildRawFlux"/> function
         /// (without built-in protection against Flux injection attacks).
         /// </para>
         /// <para>Records representing each row are passed as <c>r</c>.</para>
@@ -92,14 +92,14 @@ namespace InfluxDB.Flux.Builder
         /// <remarks>
         /// To prevent Flux injection attacks, <b>never pass a concatenated or interpolated string</b> (<c>$""</c>) with
         /// non-validated user-provided values into this method.<br/>Instead, use the <see cref="ParametersManager"/>
-        /// argument provided by <paramref name="rawFluxFiltersBuilder"/> to parameterize the values, as below:
+        /// argument provided by <paramref name="buildRawFlux"/> to parameterize the values, as below:
         /// <code>
-        /// WhereUnsafe(p => $"r._value == {p.Parameterize("val1", expectedValue)} or r._value == " + p.Parameterize("val2", fallbackValue))
+        /// WithCustomFluxUnsafe(p => $"r._value == {p.Parameterize("val1", expectedValue)} or r._value == " + p.Parameterize("val2", fallbackValue))
         /// </code>
         /// </remarks>
-        /// <param name="rawFluxFiltersBuilder">A function that builds a string representing a raw Flux predicate (eg. <c>"r._value &gt; 0 and r._value &lt; 50"</c>).</param>
-        public FluxCondition WhereUnsafe(Func<ParametersManager, string> rawFluxFiltersBuilder) => () =>
-            _stringBuilder.Append(rawFluxFiltersBuilder(_parameters));
+        /// <param name="buildRawFlux">A function that builds a string representing a raw Flux predicate (eg. <c>"r._value &gt; 0 and r._value &lt; 50"</c>).</param>
+        public FluxCondition WithCustomFluxUnsafe(Func<ParametersManager, string> buildRawFlux) => () =>
+            _stringBuilder.Append(buildRawFlux(_parameters));
 
 
         /// <summary>
@@ -108,6 +108,18 @@ namespace InfluxDB.Flux.Builder
         /// <param name="measurement">Name of the measurement to filter records.</param>
         public FluxCondition Measurement(string measurement) => () =>
             _stringBuilder.Append("r._measurement == ").Append(_parameters.Parameterize("filter_measurement", measurement));
+
+        /// <summary>
+        /// Adds conditions to the filter predicate to keep only records with any specified <paramref name="measurements"/>.
+        /// </summary>
+        /// <param name="measurements">Name of the measurements to filter records.</param>
+        public FluxCondition Measurements(IEnumerable<string> measurements) => Or(measurements.Select(Measurement));
+
+        /// <summary>
+        /// Adds conditions to the filter predicate to keep only records with any specified <paramref name="measurements"/>.
+        /// </summary>
+        /// <param name="measurements">Name of the measurements to filter records.</param>
+        public FluxCondition Measurements(params string[] measurements) => Or(measurements.Select(Measurement));
 
 
         /// <summary>
@@ -134,20 +146,20 @@ namespace InfluxDB.Flux.Builder
         /// <summary>
         /// Adds a condition to the filter predicate to keep only records with the specified <paramref name="field"/>.
         /// </summary>
-        /// <param name="field">Key of the field to filter.</param>
+        /// <param name="field">Key of the field to filter records.</param>
         public FluxCondition Field(string field) => () =>
             _stringBuilder.Append("r._field == ").Append(_parameters.Parameterize("filter_field", field));
 
         /// <summary>
         /// Adds conditions to the filter predicate to keep only records with any specified <paramref name="fields"/>.
         /// </summary>
-        /// <param name="fields">An array of field keys to filter records.</param>
+        /// <param name="fields">Key of the fields to filter records.</param>
         public FluxCondition Fields(IEnumerable<string> fields) => Or(fields.Select(Field));
 
         /// <summary>
         /// Adds conditions to the filter predicate to keep only records with any specified <paramref name="fields"/>.
         /// </summary>
-        /// <param name="fields">An array of field keys to filter records.</param>
+        /// <param name="fields">Key of the fields to filter records.</param>
         public FluxCondition Fields(params string[] fields) => Or(fields.Select(Field));
     }
 }

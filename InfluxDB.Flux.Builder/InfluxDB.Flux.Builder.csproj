@@ -10,7 +10,7 @@
 
   <PropertyGroup Label="Project properties">
     <AssemblyName>InfluxDB.Flux.Builder</AssemblyName>
-    <Version>2.0.0-preview.1</Version>
+    <Version>2.0.0-preview.2</Version>
     <Description>A library to easily build Flux queries for InfluxDB. Forked from PW.FluxQueryNet and Flux.Net by Malik Rizwan Bashir.</Description>
     <Authors>Sylvain Bruyère,Marc Weydert,Malik Rizwan Bashir</Authors>
     <Copyright>Copyright © Sylvain Bruyère $([System.DateTime]::UtcNow.ToString("yyyy")). Copyright © Paul Wurth S.A. 2022-2024. Copyright © Malik Rizwan Bashir.</Copyright>
