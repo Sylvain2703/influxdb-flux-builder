@@ -11,6 +11,12 @@ namespace InfluxDB.Flux.Builder
 
     public class FluxFilterBuilder
     {
+        private const string EqualOperator = " == ";
+        private const string NotEqualOperator = " != ";
+        private const string LessOperator = " < ";
+        private const string LessOrEqualOperator = " <= ";
+        private const string GreaterOperator = " > ";
+        private const string GreaterOrEqualOperator = " >= ";
         private const string AndOperator = " and ";
         private const string OrOperator = " or ";
 
@@ -24,6 +30,108 @@ namespace InfluxDB.Flux.Builder
             _options = options;
             _parameters = parameters;
         }
+
+        #region Create record keys
+
+        /// <summary>
+        /// Creates a custom record key, that can be used as a condition operand.
+        /// </summary>
+        public FluxRecordKey this[string recordKey] => new(this, recordKey);
+
+        /// <summary>
+        /// Creates a record key, that can be used as a condition operand, to represent the measurement.
+        /// </summary>
+        public FluxRecordKey Measurement => new(this, "_measurement", trustedKey: true);
+
+        /// <summary>
+        /// Creates a record key, that can be used as a condition operand, to represent the field.
+        /// </summary>
+        public FluxRecordKey Field => new(this, "_field", trustedKey: true);
+
+        /// <summary>
+        /// Creates a record key, that can be used as a condition operand, to represent the value.
+        /// </summary>
+        public FluxRecordKey Value => new(this, "_value", trustedKey: true);
+
+        /// <summary>
+        /// Creates a record key, that can be used as a condition operand, to represent the timestamp.
+        /// </summary>
+        public FluxRecordKey Time => new(this, "_time", trustedKey: true);
+
+        /// <summary>
+        /// Creates a record key, that can be used as a condition operand, to represent the start time.
+        /// </summary>
+        public FluxRecordKey Start => new(this, "_start", trustedKey: true);
+
+        /// <summary>
+        /// Creates a record key, that can be used as a condition operand, to represent the stop time.
+        /// </summary>
+        public FluxRecordKey Stop => new(this, "_stop", trustedKey: true);
+
+        #endregion
+
+        #region Comparison operators
+
+        /// <summary>
+        /// Adds a condition to the filter predicate that evaluates if the <paramref name="left"/> value is equal to the <paramref name="right"/> value.
+        /// </summary>
+        /// <param name="left">The left operand of the comparison.</param>
+        /// <param name="right">The right operand of the comparison.</param>
+        public FluxCondition Equal(object left, object right) => AppendComparison(left, right, EqualOperator);
+
+        /// <summary>
+        /// Adds a condition to the filter predicate that evaluates if the <paramref name="left"/> value is not equal to the <paramref name="right"/> value.
+        /// </summary>
+        /// <param name="left">The left operand of the comparison.</param>
+        /// <param name="right">The right operand of the comparison.</param>
+        public FluxCondition NotEqual(object left, object right) => AppendComparison(left, right, NotEqualOperator);
+
+        /// <summary>
+        /// Adds a condition to the filter predicate that evaluates if the <paramref name="left"/> value is less than the <paramref name="right"/> value.
+        /// </summary>
+        /// <param name="left">The left operand of the comparison.</param>
+        /// <param name="right">The right operand of the comparison.</param>
+        public FluxCondition Less(object left, object right) => AppendComparison(left, right, LessOperator);
+
+        /// <summary>
+        /// Adds a condition to the filter predicate that evaluates if the <paramref name="left"/> value is less than or equal to the <paramref name="right"/> value.
+        /// </summary>
+        /// <param name="left">The left operand of the comparison.</param>
+        /// <param name="right">The right operand of the comparison.</param>
+        public FluxCondition LessOrEqual(object left, object right) => AppendComparison(left, right, LessOrEqualOperator);
+
+        /// <summary>
+        /// Adds a condition to the filter predicate that evaluates if the <paramref name="left"/> value is greater than the <paramref name="right"/> value.
+        /// </summary>
+        /// <param name="left">The left operand of the comparison.</param>
+        /// <param name="right">The right operand of the comparison.</param>
+        public FluxCondition Greater(object left, object right) => AppendComparison(left, right, GreaterOperator);
+
+        /// <summary>
+        /// Adds a condition to the filter predicate that evaluates if the <paramref name="left"/> value is greater than or equal to the <paramref name="right"/> value.
+        /// </summary>
+        /// <param name="left">The left operand of the comparison.</param>
+        /// <param name="right">The right operand of the comparison.</param>
+        public FluxCondition GreaterOrEqual(object left, object right) => AppendComparison(left, right, GreaterOrEqualOperator);
+
+        private FluxCondition AppendComparison(object left, object right, string comparisonOperator) => () =>
+        {
+            AppendOperand(left);
+            _stringBuilder.Append(comparisonOperator);
+            AppendOperand(right);
+        };
+
+        private void AppendOperand(object operand)
+        {
+            if (operand is FluxRecordKey recordKey)
+                recordKey.Append(_stringBuilder, _options, _parameters, "filter_key");
+            else
+                _stringBuilder.Append(_parameters.Parameterize("filter_value", operand));
+        }
+
+        #endregion
+
+        #region Logical operators
 
         /// <summary>
         /// Adds conditions separated by the <c>and</c> logical operator to the filter predicate.
@@ -69,6 +177,9 @@ namespace InfluxDB.Flux.Builder
             _stringBuilder.Append(')');
         };
 
+        #endregion
+
+        #region Custom Flux
 
         /// <summary>
         /// <para>Adds conditions to the filter predicate with raw Flux specified in the <paramref name="rawFlux"/> interpolated string.</para>
@@ -101,65 +212,69 @@ namespace InfluxDB.Flux.Builder
         public FluxCondition WithCustomFluxUnsafe(Func<ParametersManager, string> buildRawFlux) => () =>
             _stringBuilder.Append(buildRawFlux(_parameters));
 
+        #endregion
+
+        #region Shorthand methods
 
         /// <summary>
-        /// Adds a condition to the filter predicate to keep only records with the specified <paramref name="measurement"/>.
+        /// Adds a condition to the filter predicate to keep only records that match the specified <paramref name="measurement"/>.
         /// </summary>
         /// <param name="measurement">Name of the measurement to filter records.</param>
-        public FluxCondition Measurement(string measurement) => () =>
+        public FluxCondition MatchMeasurement(string measurement) => () =>
             _stringBuilder.Append("r._measurement == ").Append(_parameters.Parameterize("filter_measurement", measurement));
 
         /// <summary>
-        /// Adds conditions to the filter predicate to keep only records with any specified <paramref name="measurements"/>.
+        /// Adds conditions to the filter predicate to keep only records that match any specified <paramref name="measurements"/>.
         /// </summary>
         /// <param name="measurements">Name of the measurements to filter records.</param>
-        public FluxCondition Measurements(IEnumerable<string> measurements) => Or(measurements.Select(Measurement));
+        public FluxCondition MatchAnyMeasurements(IEnumerable<string> measurements) => Or(measurements.Select(MatchMeasurement));
 
         /// <summary>
-        /// Adds conditions to the filter predicate to keep only records with any specified <paramref name="measurements"/>.
+        /// Adds conditions to the filter predicate to keep only records that match any specified <paramref name="measurements"/>.
         /// </summary>
         /// <param name="measurements">Name of the measurements to filter records.</param>
-        public FluxCondition Measurements(params string[] measurements) => Or(measurements.Select(Measurement));
+        public FluxCondition MatchAnyMeasurements(params string[] measurements) => Or(measurements.Select(MatchMeasurement));
 
 
         /// <summary>
-        /// Adds a condition to the filter predicate to keep only records with the specified <paramref name="tagKey"/> and <paramref name="tagValue"/>.
+        /// Adds a condition to the filter predicate to keep only records that match the specified <paramref name="tagKey"/> and <paramref name="tagValue"/>.
         /// </summary>
         /// <param name="tagKey">Key of the tag to filter.</param>
         /// <param name="tagValue">Value of the tag to filter.</param>
-        public FluxCondition Tag(string tagKey, string tagValue) => () =>
-        {
-            // The Flux function "record.get()" is currently the only way to get a value from a record using a key specified with a variable.
-            // Unfortunately, "r[myVariable]" does not work. See https://github.com/influxdata/flux/issues/2510.
-            _stringBuilder.Append("record.get(r: r, key: ").Append(_parameters.Parameterize("filter_tagKey", tagKey)).Append(", default: \"\") == ")
-                .Append(_parameters.Parameterize("filter_tagValue", tagValue));
-            _options.ImportPackage(FluxPackages.Experimental_Record);
-        };
+        public FluxCondition MatchTag(string tagKey, string tagValue) => Equal(this[tagKey], tagValue);
 
         /// <summary>
-        /// Adds conditions to the filter predicate to keep only records with the specified <paramref name="tags"/>.
+        /// Adds conditions to the filter predicate to keep only records that match any specified <paramref name="tags"/>.
         /// </summary>
         /// <param name="tags">A dictionary of tag keys and values to filter records.</param>
-        public FluxCondition Tags(IDictionary<string, string> tags) => And(tags.Select(t => Tag(t.Key, t.Value)));
+        public FluxCondition MatchAnyTags(IDictionary<string, string> tags) => Or(tags.Select(t => MatchTag(t.Key, t.Value)));
+
+        /// <summary>
+        /// Adds conditions to the filter predicate to keep only records that match all specified <paramref name="tags"/>.
+        /// </summary>
+        /// <param name="tags">A dictionary of tag keys and values to filter records.</param>
+        public FluxCondition MatchAllTags(IDictionary<string, string> tags) => And(tags.Select(t => MatchTag(t.Key, t.Value)));
 
 
         /// <summary>
-        /// Adds a condition to the filter predicate to keep only records with the specified <paramref name="field"/>.
+        /// Adds a condition to the filter predicate to keep only records that match the specified <paramref name="field"/>.
         /// </summary>
         /// <param name="field">Key of the field to filter records.</param>
-        public FluxCondition Field(string field) => () =>
+        public FluxCondition MatchField(string field) => () =>
             _stringBuilder.Append("r._field == ").Append(_parameters.Parameterize("filter_field", field));
 
         /// <summary>
-        /// Adds conditions to the filter predicate to keep only records with any specified <paramref name="fields"/>.
+        /// Adds conditions to the filter predicate to keep only records that match any specified <paramref name="fields"/>.
         /// </summary>
         /// <param name="fields">Key of the fields to filter records.</param>
-        public FluxCondition Fields(IEnumerable<string> fields) => Or(fields.Select(Field));
+        public FluxCondition MatchAnyFields(IEnumerable<string> fields) => Or(fields.Select(MatchField));
 
         /// <summary>
-        /// Adds conditions to the filter predicate to keep only records with any specified <paramref name="fields"/>.
+        /// Adds conditions to the filter predicate to keep only records that match any specified <paramref name="fields"/>.
         /// </summary>
         /// <param name="fields">Key of the fields to filter records.</param>
-        public FluxCondition Fields(params string[] fields) => Or(fields.Select(Field));
+        public FluxCondition MatchAnyFields(params string[] fields) => Or(fields.Select(MatchField));
+
+        #endregion
     }
 }
