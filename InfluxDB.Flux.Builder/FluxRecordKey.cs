@@ -1,4 +1,5 @@
-﻿using InfluxDB.Flux.Builder.Options;
+﻿using InfluxDB.Flux.Builder.FluxTypes.Converters;
+using InfluxDB.Flux.Builder.Options;
 using InfluxDB.Flux.Builder.Parameterization;
 using System.Text;
 
@@ -23,12 +24,20 @@ namespace InfluxDB.Flux.Builder
             {
                 stringBuilder.Append("r.").Append(_key);
             }
-            else
+            else if (options.ParameterizedTypes.IsSet(ParameterizedTypes.RecordKey)
+                  && options.ParameterizedTypes.IsSet(ParameterizedTypes.String))
             {
                 // The "record.get()" Flux function is currently the only way to get a value from a record using a key specified with a variable.
                 // Unfortunately, "r[myVariable]" does not work. See https://github.com/influxdata/flux/issues/2510.
                 options.ImportPackage(FluxPackages.Experimental_Record);
                 stringBuilder.Append("record.get(r: r, key: ").Append(parameters.Parameterize(paramName, _key)).Append(", default: \"\")");
+            }
+            else
+            {
+                // As the "record.get()" Flux function prevents data streaming and pushdown processing,
+                // escape the key with "ToFluxNotation()" instead of parameterizing it.
+                // This workaround is controlled by the "RecordKey" flag of the "ParameterizedTypes" option.
+                stringBuilder.Append("r[").Append(_key.ToFluxNotation()).Append(']');
             }
         }
 
