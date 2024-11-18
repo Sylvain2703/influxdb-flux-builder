@@ -11,53 +11,49 @@ Forked from [PW.FluxQueryNet](https://github.com/paul-wurth/PW.FluxQueryNet), it
 ## Example
 
 ```csharp
-var fluxQuery = FluxQueryBuilder.Create()
+var builder = FluxQueryBuilder.Create(new FluxBuilderOptions(ParameterizedTypes.All ^ ParameterizedTypes.RecordKey))
     .From("bucketName")
-    .Filter(f => f.Measurement("measurementName")
-        .Tag("tagKey1", "tagValue1")
-        .Tag("tagKey2", "tagValue2")
-        .Fields("field1", "field2")
-        .Where($"r._value > {min}")
-    )
-    .Range(new DateTime(2023, 01, 02, 03, 04, 05, DateTimeKind.Utc), TimeSpan.FromDays(2.5))
+    .Range(new DateTime(2024, 11, 01, 14, 30, 00, DateTimeKind.Utc), TimeSpan.FromDays(2.5))
+    .Filter(f => f.And(
+        f.MatchMeasurement("weather"),
+        f.Or(f.MatchTag("location", "London"), f["location"].Equal("Paris")),
+        f.MatchField("temperature"),
+        f.Value.Greater(min)
+    ))
     .AggregateWindow("mean", TimeSpan.FromSeconds(5), createEmpty: false)
     .Limit(50);
 
-Debug.WriteLine(fluxQuery.ToDebugQueryString());
+Debug.WriteLine(builder.ToDebugQueryString());
 
 using var client = new InfluxDBClient("http://localhost:8086", token);
 var queryApi = client.GetQueryApi();
-var tables = await queryApi.QueryAsync(fluxQuery.ToQuery(), org);
+var tables = await queryApi.QueryAsync(builder.ToQuery(), org);
 ```
 
 The code above generates the following Flux query (using `ToDebugQueryString()`) and
 creates a [`Query` object](https://influxdata.github.io/influxdb-client-csharp/api/InfluxDB.Client.Api.Domain.Query.html) (using `ToQuery()`)
 which is then sent with the [InfluxDB Client](https://github.com/influxdata/influxdb-client-csharp):
 ```flux
-import  "experimental/record"
-
 option params = {
   from_bucket_0: "bucketName",
-  filter_measurement_1: "measurementName",
-  filter_tagKey_2: "tagKey1",
-  filter_tagValue_3: "tagValue1",
-  filter_tagKey_4: "tagKey2",
-  filter_tagValue_5: "tagValue2",
-  filter_field_6: "field1",
-  filter_field_7: "field2",
-  filter_where_8: 0,
-  range_start_9: 2023-01-02T03:04:05Z,
-  range_stop_10: 2d12h,
-  aggregateWindow_every_11: 5s,
-  aggregateWindow_createEmpty_12: false,
-  limit_n_13: 50,
+  range_start_1: 2024-11-01T14:30:00Z,
+  range_stop_2: 2d12h,
+  filter_measurement_3: "weather",
+  filter_value_4: "London",
+  filter_value_5: "Paris",
+  filter_field_6: "temperature",
+  filter_value_7: 10,
+  aggregateWindow_fn_8: mean,
+  aggregateWindow_every_9: 5s,
+  aggregateWindow_createEmpty_10: false,
+  limit_n_11: 50,
 }
 
 from(bucket: params.from_bucket_0)
-|> filter(fn: (r) => r._measurement == params.filter_measurement_1 and record.get(r: r, key: params.filter_tagKey_2, default: "") == params.filter_tagValue_3 and record.get(r: r, key: params.filter_tagKey_4, default: "") == params.filter_tagValue_5 and (r._field == params.filter_field_6 or r._field == params.filter_field_7) and r._value > params.filter_where_8)
-|> range(start: params.range_start_9, stop: params.range_stop_10)
-|> aggregateWindow(fn: mean, every: params.aggregateWindow_every_11, createEmpty: params.aggregateWindow_createEmpty_12)
-|> limit(n: params.limit_n_13)
+|> range(start: params.range_start_1, stop: params.range_stop_2)
+|> filter(fn: (r) => (r._measurement == params.filter_measurement_3 and (r["location"] == params.filter_value_4 or r["location"] == params.filter_value_5) and r._field == params.filter_field_6 and r._value > params.filter_value_7))
+|> aggregateWindow(fn: params.aggregateWindow_fn_8, every: params.aggregateWindow_every_9, createEmpty: params.aggregateWindow_createEmpty_10)
+|> limit(n: params.limit_n_11)
 ```
 
 
