@@ -5,12 +5,15 @@
     <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
     <LangVersion>12.0</LangVersion>
     <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
 
   <PropertyGroup Label="Project properties">
     <AssemblyName>InfluxDB.Flux.Builder</AssemblyName>
-    <Version>2.0.0-preview.1</Version>
+    <Version>2.0.0-preview.3</Version>
     <Description>A library to easily build Flux queries for InfluxDB. Forked from PW.FluxQueryNet and Flux.Net by Malik Rizwan Bashir.</Description>
     <Authors>Sylvain Bruyère,Marc Weydert,Malik Rizwan Bashir</Authors>
     <Copyright>Copyright © Sylvain Bruyère $([System.DateTime]::UtcNow.ToString("yyyy")). Copyright © Paul Wurth S.A. 2022-2024. Copyright © Malik Rizwan Bashir.</Copyright>
@@ -19,7 +22,6 @@
     <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <SourceRevisionId Condition="'$(SourceRevisionId)' == ''">dev.$([System.Environment]::UserName).$([System.DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssK"))</SourceRevisionId>
   </PropertyGroup>
 
   <ItemGroup>

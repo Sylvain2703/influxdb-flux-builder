@@ -34,18 +34,18 @@ namespace InfluxDB.Flux.Builder
         }
 
         /// <inheritdoc/>
-        public IFluxStream PipeCustomFluxUnsafe(Func<ParametersManager, string> rawFluxBuilder)
+        public IFluxStream PipeCustomFluxUnsafe(Func<ParametersManager, string> buildRawFlux)
         {
             _stringBuilder.AppendLine();
-            _stringBuilder.AppendPipe().Append(rawFluxBuilder(_parameters));
+            _stringBuilder.AppendPipe().Append(buildRawFlux(_parameters));
             return this;
         }
 
 
         /// <inheritdoc/>
-        public IFluxStream Configure(Action<FluxBuilderOptions> configureAction)
+        public IFluxStream Configure(Action<FluxBuilderOptions> configureOptions)
         {
-            configureAction(_options);
+            configureOptions(_options);
             return this;
         }
 

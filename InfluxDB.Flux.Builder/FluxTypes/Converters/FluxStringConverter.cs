@@ -15,10 +15,9 @@ namespace InfluxDB.Flux.Builder.FluxTypes.Converters
             if (value == null)
                 throw new ArgumentNullException(nameof(value), FluxAnyTypeConverter.NullValueMessage);
 
-            // Encode string to escape quotes.
-            // There is no guarantee that this completely protects against Flux injection attacks!
-            // Passing parameters separately as a Flux AST is therefore recommended.
-            return $"\"{JavaScriptEncoder.UnsafeRelaxedJsonEscaping.Encode(value)}\"";
+            // Encode the string to escape specific characters according to https://docs.influxdata.com/flux/latest/spec/lexical-elements/#string-literals.
+            // This should protect against Flux injection attacks, but passing parameters separately as a Flux AST is still recommended.
+            return '"' + JavaScriptEncoder.UnsafeRelaxedJsonEscaping.Encode(value).Replace("${", "\\${") + '"';
         }
 
         public static StringLiteral ToFluxAstNode(this string value)

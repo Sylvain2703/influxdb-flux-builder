@@ -6,8 +6,8 @@ namespace InfluxDB.Flux.Builder
     public interface IFluxConfigurable
     {
         /// <summary>
-        /// Adjust <see cref="FluxBuilderOptions"/> configuration while building the Flux query.
+        /// Adjusts <see cref="FluxBuilderOptions"/> configuration while building the Flux query.
         /// </summary>
-        IFluxStream Configure(Action<FluxBuilderOptions> configureAction);
+        IFluxStream Configure(Action<FluxBuilderOptions> configureOptions);
     }
 }
